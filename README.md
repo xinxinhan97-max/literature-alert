@@ -21,7 +21,7 @@
 ### 手动安装
 
 ```bash
-git clone https://github.com/xinxinhan/literature-alert.git
+git clone https://github.com/xinxinhan97-max/literature-alert.git
 cd literature-alert/templates
 # 打开 strategies.json 写上你的研究方向
 # 打开 config.json 填 API Key（如果要用 AI 分析）
@@ -77,7 +77,7 @@ Type `/setup-literature` in Claude Code and you're done in a few minutes. No Pyt
 Or manually:
 
 ```bash
-git clone https://github.com/xinxinhan/literature-alert.git
+git clone https://github.com/xinxinhan97-max/literature-alert.git
 cd literature-alert/templates
 python literature_alert.py --dry-run
 ```
