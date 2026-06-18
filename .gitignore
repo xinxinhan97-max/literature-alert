@@ -1,0 +1,13 @@
+# User data (never commit)
+sent_cache.pkl
+/config.json
+/strategies.json
+literature_*.html
+
+# Python
+__pycache__/
+*.pyc
+
+# IDE
+.vscode/
+.idea/

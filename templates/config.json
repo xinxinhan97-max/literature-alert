@@ -1,0 +1,21 @@
+{
+  "email": {
+    "smtp_server": "smtp.qq.com",
+    "smtp_port": 465,
+    "sender": "YOUR_EMAIL@qq.com",
+    "password": "YOUR_SMTP_AUTH_CODE",
+    "receiver": "YOUR_EMAIL@qq.com"
+  },
+  "search": {
+    "max_results_per_query": 15,
+    "lookback_days": 7,
+    "arxiv_timeout": 60,
+    "use_semantic_scholar": false
+  },
+  "ai": {
+    "enabled": true,
+    "base_url": "https://api.deepseek.com/v1",
+    "model": "deepseek-chat",
+    "api_key": "YOUR_API_KEY"
+  }
+}
