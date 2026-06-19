@@ -461,6 +461,11 @@ def _render_paper_card(p: dict, match_map: dict, lang: str = "zh", interactive: 
             label = t("abstract_en_label", lang) if lang == "en" else "英文摘要"
             ai_html += f'<div class="ai-row" style="margin-top:6px;padding-top:6px;border-top:1px dashed #ddd;"><b>📝 {label}：</b>{en_abs}</div>'
 
+    # 如果 AI 没开/没成果，回退展示原始摘要
+    if not ai and p.get("abstract"):
+        abstract_label = "Abstract" if lang == "en" else "摘要"
+        ai_html = f'<div class="ai-box"><div class="ai-row"><b>📄 {abstract_label}：</b>{p["abstract"]}</div></div>'
+
     prefix = f"{date_tag}_{hid}" if date_tag else hid
     int_html = ""
     if interactive:
