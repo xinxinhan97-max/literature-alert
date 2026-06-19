@@ -1,10 +1,10 @@
 # Literature Alert
 
-我每天开机第一件事就是扫一眼今天有什么新论文。但手工搜太费时间了，所以写了这个东西。
+每天早上扫一眼自己领域的新论文——这事我手工做了两年，烦了，于是写了这个。
 
-你告诉它你的研究方向，它会每天自动检索最新论文，AI 帮你打分、匹配子课题、翻译成中文、标出创新点。浏览器里打开就能标记哪些读了、哪些跳过、顺手写几句笔记，最后导出一份 Markdown 日志。
+在 Claude Code 里聊几句，告诉它你研究什么，它就帮你搭好一套自动化系统：每天去 OpenAlex 搜最新论文，AI 逐篇读摘要、打分、匹配子方向、翻译摘要、提炼创新点，最后生成一个浏览器能打开的 HTML 报告。你点点鼠标就能标记已读/不读、随手写笔记、导出一份 Markdown 日志。
 
-在 Claude Code 里输 `/setup-literature`，聊几句就搭好了。不用懂 Python，不用买服务器。
+不需要懂 Python，不需要服务器，甚至不需要装任何第三方包。
 
 ---
 
@@ -16,61 +16,75 @@
 /setup-literature
 ```
 
-跟着对话走，描述你的研究方向就行。AI 模型用 DeepSeek 的话，一个月大概花 2 块钱。
+跟着对话走就行。AI 模型选 DeepSeek 的话，一个月大概两块钱。
 
 ### 手动安装
 
 ```bash
 git clone https://github.com/xinxinhan97-max/literature-alert.git
 cd literature-alert/templates
-# 打开 strategies.json 写上你的研究方向
-# 打开 config.json 填 API Key（如果要用 AI 分析）
-python literature_alert.py --dry-run   # 试跑
+# 编辑 strategies.json，写上你的研究方向
+# 编辑 config.json，填 API Key（要用 AI 分析的话）
+python literature_alert.py --dry-run   # 先试跑看看
 python literature_alert.py             # 正式运行
 ```
 
-## 它做了什么
+---
 
-- 每天检索最近一周的新论文（OpenAlex，2.5 亿篇）
-- AI 给你的课题打分（1-5 星），匹配到你具体的子方向
-- 每篇论文逐句翻译（中文 / 英文 / 双语，你自己选）
-- 提炼创新点、方法、关键指标，写一句"对你有啥用"
-- 自动标上期刊影响因子和 Q 分区
-- 浏览器交互：已读 / 不读 / 写笔记 / 导出日志
-- 可以顺便发一封邮件给你（用的 QQ 邮箱 SMTP）
-- 定时推送 + 开机自启，不用管
-- 输出路径、推送时间、语言都可以自己定
+## 具体功能
+
+- **双源检索** — 同时搜 OpenAlex（2.5 亿篇论文）和 arXiv，合并去重
+- **AI 打分** — 每篇论文 1-5 星，匹配到你的具体子方向
+- **摘要翻译** — 把英文摘要逐句翻成中文（或英文/双语，你选），不概括、不省略
+- **提炼关键信息** — 创新点、实验方法、性能指标、对你课题的借鉴价值
+- **期刊分级** — 自动匹配影响因子和 JCR 分区（10,200+ 期刊）
+- **浏览器交互** — 打开 HTML 就能标记已读/跳过/写笔记，状态存本地浏览器
+- **一键导出** — 把当天的阅读记录导出为 Markdown 日志
+- **邮件推送**（可选）— 用 QQ 邮箱 SMTP 把报告发到邮箱
+- **定时 + 开机自启** — Windows 定时任务到点就跑，开机自启当兜底
+
+---
 
 ## 支持的 AI 模型
 
-DeepSeek、OpenAI、智谱、通义千问、本地 Ollama 都行。不用 AI 分析也可以，纯检索 + 翻译。
+| 模型 | 月费（估） |
+|------|-----------|
+| DeepSeek（推荐） | ~¥2 |
+| OpenAI GPT-4o-mini | ~¥5 |
+| 智谱 GLM-4-Flash | ~¥3 |
+| 通义千问 Qwen-Plus | ~¥3 |
+| 本地 Ollama | 免费 |
+| 其他 OpenAI 兼容 API | 自己试 |
+
+也可以完全不用 AI——纯检索，跳过分析和翻译。
+
+---
 
 ## 环境要求
 
-Python 3.9 以上，不需要安装任何第三方包。到哪台电脑上都能跑。
+Python 3.9+。零第三方依赖，换了电脑拷过去就能跑。
 
 ---
 
 ## English
 
-I built this because I got tired of manually searching for papers every morning.
+I spent two years manually searching for new papers every morning. Got tired of it and built this.
 
-Describe your research area, and it fetches the latest papers daily. An AI reads each one, scores how relevant it is to your specific sub-topics, translates the abstract into Chinese, and pulls out what's new and what you can learn from it. Results open in your browser — you can mark papers read or skip, jot down notes, and export everything as a Markdown reading log.
+Describe your research area to Claude Code, and it sets up a daily pipeline for you: searches OpenAlex (and optionally arXiv) for the latest papers, then an AI reads each abstract, scores relevance to your sub-topics, translates the abstract, and extracts innovations, methods, and takeaways. Results open as an interactive HTML page in your browser — mark papers read or skip, jot notes, export a reading log.
 
-Type `/setup-literature` in Claude Code and you're done in a few minutes. No Python knowledge needed, no server to maintain.
+### Features
 
-### How it works
+- **Dual-source search** — OpenAlex (250M papers) + arXiv, merged and deduplicated
+- **AI scoring** — 1-5 star relevance rating, matched to your specific sub-directions
+- **Abstract translation** — faithful sentence-by-sentence translation (Chinese / English / bilingual)
+- **Key extraction** — innovation, methods, performance metrics, practical takeaways
+- **Journal metrics** — impact factor and JCR quartile lookup (10,200+ journals)
+- **Interactive HTML** — read/skip/note buttons, state persisted in browser localStorage
+- **One-click export** — Markdown reading log for the day
+- **Email digest** (optional) — SMTP delivery to your inbox
+- **Scheduled + auto-start** — Windows Task Scheduler for timed runs, startup shortcut as fallback
 
-- Searches OpenAlex (250M papers) for the past week
-- AI scores relevance to your sub-fields and highlights innovations
-- Abstract translation in Chinese, English, or bilingual (your choice)
-- Interactive HTML with read/skip/notes/export
-- Journal impact factor lookup (10,200 journals)
-- Optional email digest
-- Scheduled daily push + auto-start on boot
-- Customizable output path, push time, and language
-
-### Install
+### Setup
 
 ```
 /setup-literature
@@ -84,19 +98,19 @@ cd literature-alert/templates
 python literature_alert.py --dry-run
 ```
 
-### AI models supported
+### AI Models
 
-DeepSeek (recommended), OpenAI, Zhipu GLM, Qwen, local Ollama — or skip AI entirely. Only costs about $0.3/month with DeepSeek.
+DeepSeek (recommended, ~$0.3/month), OpenAI, Zhipu GLM, Qwen, local Ollama, or any OpenAI-compatible API. Skip AI entirely if you only want search results.
 
 ### Requirements
 
-Python 3.9+. Zero pip dependencies.
+Python 3.9+. Zero pip dependencies. Works on any machine.
 
 ---
 
 ## Sponsor
 
-如果这个东西帮你省了时间，可以请我喝杯咖啡。
+省了你的时间的话，请我喝杯咖啡。
 
 <div align="center">
   <table>
