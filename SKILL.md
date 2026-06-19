@@ -35,16 +35,29 @@ description: >-
 
 展示给用户确认或修改。
 
-### 步骤 3：确认推送节奏
+### 步骤 3：确认推送节奏和时间
 
 | 问题 | 默认值 |
 |------|--------|
 | 每周哪几天推送？ | 周一至周五 |
 | 每天推送相同内容还是不同？ | 相同 |
+| 每天几点推送？ | 08:00 |
 
 如果用户需要每天不同主题，为每天分别生成检索词。
 
-### 步骤 4：选择 AI 分析模型
+> ⚠️ 提醒：定时推送依赖 Windows 任务计划程序，**需要电脑在设定的时间处于开机状态**。如果那个时间电脑没开，任务会在下次开机时补跑一次（开机自启兜底）。
+
+### 步骤 4：选择输出语言
+
+| 选项 | 说明 |
+|------|------|
+| A) 中文 | AI 分析、报告界面、邮件均为中文 |
+| B) 英文 | AI 分析、报告界面、邮件均为英文 |
+| C) 中英双语 | AI 同时输出中英文摘要，界面中文 |
+
+默认 A。
+
+### 步骤 5：选择 AI 分析模型
 
 | 选项 | base_url | model | 费用 |
 |------|----------|-------|------|
@@ -55,7 +68,7 @@ description: >-
 | E) 不要 AI 分析 | — | — | 免费 |
 | F) 其他 OpenAI 兼容 API | 用户提供 | 用户提供 | 不定 |
 
-### 步骤 5：邮件推送？（默认：否）
+### 步骤 6：邮件推送？（默认：否）
 
 如果用户需要邮件推送，指引用户：
 1. 登录 QQ 邮箱 → 设置 → 账户 → 开启 POP3/SMTP 服务
@@ -64,12 +77,24 @@ description: >-
 
 不索取授权码，只在对话中指引。
 
-### 步骤 6：开机自启动？（默认：是）
+### 步骤 7：开机自启动？
 
-如果是 → 创建 `startup.bat` 并添加快捷方式到 Windows 启动文件夹。
-如果否 → 跳过。
+询问用户是否需要开机自动运行。如果用户选了定时推送（步骤 3），说明有两种调度方式：
 
-### 步骤 7：输出目录（默认：当前目录/literature_alert/）
+| 方式 | 说明 |
+|------|------|
+| Windows 定时任务 | 按设定时间运行，需电脑开机 |
+| 开机自启动 | 开机后立即运行一次，作为定时任务的兜底 |
+
+默认建议：**两者都开**——定时任务负责日常准时推送，开机自启负责补跑错过的时间点。
+
+如果用户只需要开机自启 → 创建 `startup.bat` 并添加快捷方式到 `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\`。
+如果用户选了定时任务 → 用 `schtasks` 命令创建 Windows 定时任务。
+如果都不要 → 手动运行。
+
+### 步骤 8：输出目录
+
+询问用户文献报告保存到哪个文件夹。默认：`当前目录/literature_alert/`。
 
 ---
 
@@ -80,6 +105,7 @@ description: >-
 ```json
 {
   "workdays": [0, 1, 2, 3, 4],
+  "schedule_time": "08:00",
   "directions": [
     {"id": 1, "name": "用户方向的完整中文名", "name_short": "简短标签", "en_name": "English keywords"}
   ],
@@ -99,23 +125,62 @@ description: >-
 
 **规则：**
 - `workdays`: 整数数组，0=周一，6=周日
+- `schedule_time`: 字符串，`HH:MM` 格式，定时推送时间
 - `directions[].id`: 从 1 开始递增
 - `days` 的 key 是工作日数字的字符串
 - 如果每天主题相同，`days` 里每天用同一个 topic 和 layers
 - `direction_ids` 指向 `directions` 中对应的方向 id
 - 每天至少 1 层、最多 3 层检索
 
-### 2. `literature_alert.py` 和 `ai_analyzer.py`
+### 2. `config.json`
+
+```json
+{
+  "output": {
+    "dir": "./reports",
+    "language": "zh"
+  },
+  "schedule": {
+    "enabled": true,
+    "time": "08:00",
+    "auto_start": true
+  },
+  "email": {
+    "smtp_server": "smtp.qq.com",
+    "smtp_port": 465,
+    "sender": "YOUR_EMAIL@qq.com",
+    "password": "YOUR_SMTP_AUTH_CODE",
+    "receiver": "YOUR_EMAIL@qq.com"
+  },
+  "search": {
+    "max_results_per_query": 15,
+    "lookback_days": 7,
+    "arxiv_timeout": 60,
+    "use_semantic_scholar": false
+  },
+  "ai": {
+    "enabled": true,
+    "base_url": "https://api.deepseek.com/v1",
+    "model": "deepseek-chat",
+    "api_key": "YOUR_API_KEY"
+  }
+}
+```
+
+**字段说明：**
+- `output.dir`: 报告输出目录，相对路径相对于脚本目录
+- `output.language`: `zh` / `en` / `bilingual`
+- `schedule.enabled`: 是否启用 Windows 定时任务
+- `schedule.time`: 定时推送时间 `HH:MM`
+- `schedule.auto_start`: 是否开机自启动
+
+### 3. `literature_alert.py` 和 `ai_analyzer.py`
 
 从 `templates/` 目录复制到输出目录。
 
-### 3. `config.json`
-
-从 `templates/config.json` 复制，包含所有占位符。
-
 ### 4. `journal_if.json`
 
-从当前 skill 所在位置（`E:\硕士\literature_alert\journal_if.json`）复制到输出目录。如源文件不存在，创建空 `{}` 并提示用户稍后手动复制。
+从 templates 目录复制到输出目录。如果 templates 目录中没有，提示用户从 GitHub 仓库下载。
 
 ### 5. `startup.bat`（仅当用户选择开机自启）
 
@@ -126,6 +191,16 @@ start "" /min python "输出目录\literature_alert.py"
 ```
 
 然后创建快捷方式到 `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\`。
+
+### 6. Windows 定时任务（仅当用户选择定时推送）
+
+用 `schtasks` 创建：
+
+```batch
+schtasks /create /tn "LiteratureAlert" /tr "python \"输出目录\literature_alert.py\"" /sc daily /st 08:00
+```
+
+提醒用户：定时任务需要电脑在设定时间开机。如果关机了，任务会错过；开机自启可以作为兜底。
 
 ---
 
@@ -143,13 +218,18 @@ start "" /min python "输出目录\literature_alert.py"
 3. 正式运行：
    python literature_alert.py
 
-以后每次开机自动运行，浏览器弹出文献报告。
+{根据用户选择显示}：
+- 定时推送已创建：每天 {时间} 自动运行（需电脑开机）
+- 开机自启已设置：开机后自动运行
+- 手动运行：每次需要时执行 python literature_alert.py
+
 想调整检索词或推送节奏 → 编辑 strategies.json
-想换 AI 模型 → 编辑 config.json 的 ai 部分
+想换 AI 模型或语言 → 编辑 config.json
+想改推送时间 → 编辑 config.json（schedule.time），然后重新运行 setup 更新定时任务
 ```
 
 ## 注意事项
 
 - 绝不索取或记录用户的 API key、授权码等凭据
-- 如果 `journal_if.json` 源文件不可用，创建空文件并说明
+- 定时任务依赖 Windows 任务计划程序，关机时不会执行——务必向用户说明
 - 如果用户要用的 AI 模型不在预设列表中，根据用户提供的 base_url 和 model 名称配置即可

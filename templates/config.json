@@ -1,4 +1,13 @@
 {
+  "output": {
+    "dir": "",
+    "language": "zh"
+  },
+  "schedule": {
+    "enabled": false,
+    "time": "08:00",
+    "auto_start": false
+  },
   "email": {
     "smtp_server": "smtp.qq.com",
     "smtp_port": 465,

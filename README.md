@@ -33,12 +33,13 @@ python literature_alert.py             # 正式运行
 
 - 每天检索最近一周的新论文（OpenAlex，2.5 亿篇）
 - AI 给你的课题打分（1-5 星），匹配到你具体的子方向
-- 每篇论文逐句翻译成中文（不概括，原文有什么翻什么）
+- 每篇论文逐句翻译（中文 / 英文 / 双语，你自己选）
 - 提炼创新点、方法、关键指标，写一句"对你有啥用"
 - 自动标上期刊影响因子和 Q 分区
 - 浏览器交互：已读 / 不读 / 写笔记 / 导出日志
 - 可以顺便发一封邮件给你（用的 QQ 邮箱 SMTP）
-- 开机自己跑，不用管
+- 定时推送 + 开机自启，不用管
+- 输出路径、推送时间、语言都可以自己定
 
 ## 支持的 AI 模型
 
@@ -62,11 +63,12 @@ Type `/setup-literature` in Claude Code and you're done in a few minutes. No Pyt
 
 - Searches OpenAlex (250M papers) for the past week
 - AI scores relevance to your sub-fields and highlights innovations
-- Full Chinese translation of every abstract
+- Abstract translation in Chinese, English, or bilingual (your choice)
 - Interactive HTML with read/skip/notes/export
 - Journal impact factor lookup (10,200 journals)
 - Optional email digest
-- Runs automatically on startup
+- Scheduled daily push + auto-start on boot
+- Customizable output path, push time, and language
 
 ### Install
 
