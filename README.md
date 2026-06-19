@@ -37,8 +37,8 @@ python literature_alert.py             # 正式跑 · run
 
 - 从 OpenAlex 搜最近一周的新论文（arXiv 可选）
   Searches OpenAlex for recent papers (arXiv optional)
-- AI 读每篇摘要，给 1-5 星打分，匹配到具体子方向
-  AI reads abstracts, scores relevance (1-5), matches to sub-topics
+- AI 读每篇摘要，1-5 星打分（5=直接命中方向，4=高度相关，3=同一大类，2=不同子领域，1=不相关），匹配到具体子方向
+  AI reads abstracts, scores relevance 1-5 (5=right on topic, 4=highly relevant, 3=same broad field, 2=different subfield, 1=irrelevant), matches to sub-topics
 - 摘要逐句翻译（中文 / 英文 / 双语），不概括不省略
   Sentence-by-sentence abstract translation (Chinese / English / bilingual)
 - 提炼创新点、方法、关键指标、有没有参考价值

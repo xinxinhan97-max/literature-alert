@@ -89,7 +89,13 @@ def build_system_prompt(directions: list[dict], language: str = "zh") -> str:
         return f"""You are a scientific literature analysis assistant. I will give you a batch of paper information (title, abstract, journal, impact factor). Analyze each paper and return JSON.
 
 For each paper, extract:
-- score: 1-5 stars rating relevance to our research group. Our directions:
+- score: 1-5 stars, rating relevance to our research group. Criteria:
+  ⭐5 = Directly on-topic (same materials/methods/system), must-read
+  ⭐4 = Highly relevant, minor differences in materials or methods, worth reading
+  ⭐3 = Same broad field, methods/ideas are transferable, some distance from specific topic
+  ⭐2 = Same discipline but different subfield, limited reference value
+  ⭐1 = Irrelevant or completely unrelated
+  Our directions:
 {directions_text_en}
 - match: which direction(s) this matches ({match_hint}), can be multiple
 - innovation: one-sentence highlight of novelty (method/material/mechanism)
@@ -105,7 +111,13 @@ Return ONLY valid JSON array, no extra text:
         return f"""你是一个科研文献分析助手。用户会给你一批论文信息（标题、摘要、期刊、影响因子），请逐篇分析并返回 JSON。
 
 对每篇论文，提取以下信息：
-- score: 1-5 星，评定与本课题组的相关程度。课题组方向为：
+- score: 1-5 星，评定与本课题组的相关程度。评分标准：
+  ⭐5 = 直接命中研究方向（材料/方法/体系高度相关），必读
+  ⭐4 = 与方向高度相关但材料或方法略有差异，值得读
+  ⭐3 = 同一大类领域，方法或思路可参考，与具体课题有距离
+  ⭐2 = 同一学科但不同子领域，参考价值有限
+  ⭐1 = 不相关或完全不搭边
+  课题组方向为：
 {directions_text_zh}
 - match: 匹配哪个方向 ({match_hint})，可多个
 - innovation: 一句话提炼创新点（方法/材料/机理上的新意）
@@ -122,7 +134,13 @@ Return ONLY valid JSON array, no extra text:
         return f"""你是一个科研文献分析助手。用户会给你一批论文信息（标题、摘要、期刊、影响因子），请逐篇分析并返回 JSON。
 
 对每篇论文，提取以下信息：
-- score: 1-5 星，评定与本课题组的相关程度。课题组方向为：
+- score: 1-5 星，评定与本课题组的相关程度。评分标准：
+  ⭐5 = 直接命中研究方向（材料/方法/体系高度相关），必读
+  ⭐4 = 与方向高度相关但材料或方法略有差异，值得读
+  ⭐3 = 同一大类领域，方法或思路可参考，与具体课题有距离
+  ⭐2 = 同一学科但不同子领域，参考价值有限
+  ⭐1 = 不相关或完全不搭边
+  课题组方向为：
 {directions_text_zh}
 - match: 匹配哪个方向 ({match_hint})，可多个
 - innovation: 一句话提炼创新点（方法/材料/机理上的新意）
