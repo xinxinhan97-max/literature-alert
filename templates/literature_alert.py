@@ -412,6 +412,21 @@ def deduplicate_papers(papers: list[dict], sent_cache: set[str]) -> list[dict]:
     return new_papers
 
 
+def filter_by_keywords(papers: list[dict], required_keywords: list[str]) -> list[dict]:
+    """按关键词硬过滤：标题或摘要中必须包含所有指定关键词（忽略大小写）。
+    例如 required_keywords=["photocat", "CO2"] 要求两词都出现。
+    每个关键词只需在标题或摘要中出现一次即可（子串匹配）。
+    """
+    if not required_keywords:
+        return papers
+    filtered = []
+    for p in papers:
+        text = (p.get("title", "") + " " + p.get("abstract", "")).lower()
+        if all(kw.lower() in text for kw in required_keywords):
+            filtered.append(p)
+    return filtered
+
+
 # ============================================================
 # HTML 生成
 # ============================================================
@@ -460,6 +475,7 @@ def _render_paper_card(p: dict, match_map: dict, lang: str = "zh", interactive: 
         if en_abs:
             label = t("abstract_en_label", lang) if lang == "en" else "英文摘要"
             ai_html += f'<div class="ai-row" style="margin-top:6px;padding-top:6px;border-top:1px dashed #ddd;"><b>📝 {label}：</b>{en_abs}</div>'
+        ai_html += '</div>'  # 关闭 ai-box
 
     # 如果 AI 没开/没成果，回退展示原始摘要
     if not ai and p.get("abstract"):
@@ -695,6 +711,13 @@ def run_search_mode(task_file: str):
                 seen_urls.add(url)
                 merged.append(p)
 
+        # 关键词硬过滤（如果查询中指定了 required_keywords）
+        req_kw = q.get("required_keywords", [])
+        before_filter = len(merged)
+        if req_kw:
+            merged = filter_by_keywords(merged, req_kw)
+            print(f"  关键词过滤 ({', '.join(req_kw)}): {before_filter} → {len(merged)}")
+
         print(t("papers_count", ui_lang, oa=str(len(oa_papers)), arxiv=str(len(arxiv_papers)),
                 new=str(len(merged))))
         papers_by_layer.append((label, merged))
@@ -890,6 +913,13 @@ def main():
             if url and url not in seen_urls:
                 seen_urls.add(url)
                 merged.append(p)
+
+        # 关键词硬过滤（如果查询中指定了 required_keywords）
+        req_kw = layer.get("required_keywords", [])
+        before_filter = len(merged)
+        if req_kw:
+            merged = filter_by_keywords(merged, req_kw)
+            print(f"  关键词过滤 ({', '.join(req_kw)}): {before_filter} → {len(merged)}")
 
         new_papers = deduplicate_papers(merged, sent_cache)
         print(t("papers_count", ui_lang, oa=str(len(openalex_papers)), arxiv=str(len(arxiv_papers)),

@@ -46,8 +46,17 @@ description: >-
 
 根据研究方向，为每个方向生成 **L1（精准）和 L2（宽泛）** 两层检索：
 
-- **OpenAlex 查询**：3-5 个英文核心关键词，自然语言格式
+- **OpenAlex 查询**：使用布尔语法，`+` 强制匹配、`-` 排除、`"phrase"` 精确短语。例如搜光催化 CO₂ 还原时，排除电催化和热催化：
+  ```
+  +photocatalytic +"CO2 reduction" +aerobic -electrocatalytic -electrochemical -thermocatalytic
+  ```
 - **arXiv 查询**：布尔格式，`all:term AND all:term` 语法，用括号包围
+
+每层同时生成 `required_keywords`：一个关键词数组，论文标题或摘要**必须包含所有词**才保留。例如搜光催化方向：
+```json
+"required_keywords": ["photocat", "CO2"]
+```
+这作为二次硬过滤兜底——即使 OpenAlex 漏了不相关的论文，Python 端也会直接丢掉。
 
 展示给用户确认或修改。顺便问一句要不要开 arXiv（有些领域 arXiv 没用）。
 
@@ -140,8 +149,8 @@ description: >-
       "subtitle": "副标题描述",
       "direction_ids": [1],
       "layers": [
-        {"label": "L1 精准检索", "openalex": "core keyword query", "arxiv": "(all:term1 AND all:term2)"},
-        {"label": "L2 宽泛检索", "openalex": "broader query", "arxiv": "(all:term1 AND all:term3) OR (all:term2 AND all:term4)"}
+        {"label": "L1 精准检索", "openalex": "+core +\"phrase match\" -excluded", "arxiv": "(all:term1 AND all:term2)", "required_keywords": ["keyword1", "keyword2"]},
+        {"label": "L2 宽泛检索", "openalex": "+broader +query -excluded", "arxiv": "(all:term1 AND all:term3) OR (all:term2 AND all:term4)", "required_keywords": ["keyword1"]}
       ]
     }
   }
@@ -155,6 +164,8 @@ description: >-
 - 如果每天主题相同，`days` 里每天用同一个 topic 和 layers
 - `direction_ids` 指向 `directions` 中对应的方向 id
 - 每天至少 1 层、最多 3 层检索
+- `openalex`: 必须使用布尔语法（`+` 强制、`-` 排除、`"phrase"` 精确），不能只用自然语言
+- `required_keywords`: 每个关键词是子串匹配（忽略大小写），论文标题+摘要中必须全部出现。用于兜底过滤
 
 ### 2. 检索模式：`search_task.json`
 
@@ -166,8 +177,8 @@ description: >-
     {"id": 1, "name": "方向全名", "name_short": "标签", "en_name": "English keywords"}
   ],
   "queries": [
-    {"label": "L1 精准检索", "openalex": "core query", "arxiv": "(all:term1 AND all:term2)"},
-    {"label": "L2 宽泛检索", "openalex": "broader query", "arxiv": "(all:term1 AND all:term3)"}
+    {"label": "L1 精准检索", "openalex": "+core +\"phrase match\" -excluded", "arxiv": "(all:term1 AND all:term2)", "required_keywords": ["keyword1", "keyword2"]},
+    {"label": "L2 宽泛检索", "openalex": "+broader +query -excluded", "arxiv": "(all:term1 AND all:term3)", "required_keywords": ["keyword1"]}
   ],
   "date_range": {
     "from": "2024-01-01",
