@@ -1,122 +1,82 @@
-# Literature Alert
+# Literature Alert · 文献快报
 
-每天早上扫一眼自己领域的新论文——这事我手工做了两年，烦了，于是写了这个。
+一个每天自动搜论文、AI 读摘要、生成网页报告的小工具。
 
-在 Claude Code 里聊几句，告诉它你研究什么，它就帮你搭好一套自动化系统：每天去 OpenAlex 搜最新论文，AI 逐篇读摘要、打分、匹配子方向、翻译摘要、提炼创新点，最后生成一个浏览器能打开的 HTML 报告。你点点鼠标就能标记已读/不读、随手写笔记、导出一份 Markdown 日志。
-
-不需要懂 Python，不需要服务器，甚至不需要装任何第三方包。
+A small tool that searches new papers daily, uses AI to read abstracts, and generates an interactive HTML report.
 
 ---
 
-## 怎么用
+## 怎么用 · How to use
 
-### Claude Code 一键部署
+在 Claude Code 里输入：
+
+In Claude Code, type:
 
 ```
 /setup-literature
 ```
 
-跟着对话走就行。AI 模型选 DeepSeek 的话，一个月大概两块钱。
+聊几句就搭好了。不用懂 Python。
 
-### 手动安装
+A few lines of conversation and it's done. No Python knowledge needed.
 
-```bash
-git clone https://github.com/xinxinhan97-max/literature-alert.git
-cd literature-alert/templates
-# 编辑 strategies.json，写上你的研究方向
-# 编辑 config.json，填 API Key（要用 AI 分析的话）
-python literature_alert.py --dry-run   # 先试跑看看
-python literature_alert.py             # 正式运行
-```
-
----
-
-## 具体功能
-
-- **双源检索** — 同时搜 OpenAlex（2.5 亿篇论文）和 arXiv，合并去重
-- **AI 打分** — 每篇论文 1-5 星，匹配到你的具体子方向
-- **摘要翻译** — 把英文摘要逐句翻成中文（或英文/双语，你选），不概括、不省略
-- **提炼关键信息** — 创新点、实验方法、性能指标、对你课题的借鉴价值
-- **期刊分级** — 自动匹配影响因子和 JCR 分区（10,200+ 期刊）
-- **浏览器交互** — 打开 HTML 就能标记已读/跳过/写笔记，状态存本地浏览器
-- **一键导出** — 把当天的阅读记录导出为 Markdown 日志
-- **邮件推送**（可选）— 用 QQ 邮箱 SMTP 把报告发到邮箱
-- **定时 + 开机自启** — Windows 定时任务到点就跑，开机自启当兜底
-
----
-
-## 支持的 AI 模型
-
-| 模型 | 月费（估） |
-|------|-----------|
-| DeepSeek（推荐） | ~¥2 |
-| OpenAI GPT-4o-mini | ~¥5 |
-| 智谱 GLM-4-Flash | ~¥3 |
-| 通义千问 Qwen-Plus | ~¥3 |
-| 本地 Ollama | 免费 |
-| 其他 OpenAI 兼容 API | 自己试 |
-
-也可以完全不用 AI——纯检索，跳过分析和翻译。
-
----
-
-## 环境要求
-
-Python 3.9+。零第三方依赖，换了电脑拷过去就能跑。
-
----
-
-## English
-
-I spent two years manually searching for new papers every morning. Got tired of it and built this.
-
-Describe your research area to Claude Code, and it sets up a daily pipeline for you: searches OpenAlex (and optionally arXiv) for the latest papers, then an AI reads each abstract, scores relevance to your sub-topics, translates the abstract, and extracts innovations, methods, and takeaways. Results open as an interactive HTML page in your browser — mark papers read or skip, jot notes, export a reading log.
-
-### Features
-
-- **Dual-source search** — OpenAlex (250M papers) + arXiv, merged and deduplicated
-- **AI scoring** — 1-5 star relevance rating, matched to your specific sub-directions
-- **Abstract translation** — faithful sentence-by-sentence translation (Chinese / English / bilingual)
-- **Key extraction** — innovation, methods, performance metrics, practical takeaways
-- **Journal metrics** — impact factor and JCR quartile lookup (10,200+ journals)
-- **Interactive HTML** — read/skip/note buttons, state persisted in browser localStorage
-- **One-click export** — Markdown reading log for the day
-- **Email digest** (optional) — SMTP delivery to your inbox
-- **Scheduled + auto-start** — Windows Task Scheduler for timed runs, startup shortcut as fallback
-
-### Setup
-
-```
-/setup-literature
-```
-
-Or manually:
+手动安装 · Manual install：
 
 ```bash
 git clone https://github.com/xinxinhan97-max/literature-alert.git
 cd literature-alert/templates
-python literature_alert.py --dry-run
+# 改 strategies.json，填研究方向 · Edit strategies.json with your research topics
+# 想用 AI 分析的话，config.json 里填 api key · Fill in api key in config.json for AI analysis
+python literature_alert.py --dry-run   # 先试跑 · test run
+python literature_alert.py             # 正式跑 · run
 ```
-
-### AI Models
-
-DeepSeek (recommended, ~$0.3/month), OpenAI, Zhipu GLM, Qwen, local Ollama, or any OpenAI-compatible API. Skip AI entirely if you only want search results.
-
-### Requirements
-
-Python 3.9+. Zero pip dependencies. Works on any machine.
 
 ---
 
-## Sponsor
+## 具体干什么 · What it does
 
-省了你的时间的话，请我喝杯咖啡。
+- 从 OpenAlex 搜最近一周的新论文（arXiv 可选）
+  Searches OpenAlex for recent papers (arXiv optional)
+- AI 读每篇摘要，给 1-5 星打分，匹配到具体子方向
+  AI reads abstracts, scores relevance (1-5), matches to sub-topics
+- 摘要逐句翻译（中文 / 英文 / 双语），不概括不省略
+  Sentence-by-sentence abstract translation (Chinese / English / bilingual)
+- 提炼创新点、方法、关键指标、有没有参考价值
+  Extracts innovations, methods, metrics, and takeaways
+- 自动标期刊影响因子和 JCR 分区
+  Journal impact factor and JCR quartile lookup
+- 生成 HTML 网页，浏览器打开就能标记已读/跳过、写笔记，状态存浏览器里
+  Interactive HTML page: mark read/skip, write notes (persisted in browser)
+- 一键导出当天阅读记录为 Markdown
+  One-click Markdown export of daily reading log
+- 可选邮件推送
+  Optional email digest
+- 可选定时任务或开机自启
+  Optional scheduled daily run or auto-start on boot
+
+AI 模型用 DeepSeek 一个月大概两块钱。不用 AI 也行，纯检索。
+
+With DeepSeek it costs about $0.3/month. Works without AI too — search only.
+
+---
+
+## 环境 · Requirements
+
+Python 3.9+。零第三方依赖。 Zero dependencies.
+
+---
+
+## Sponsor · 支持
+
+如果帮你省了时间，欢迎打赏。
+
+If this saved you some time, buy me a coffee.
 
 <div align="center">
   <table>
     <tr>
       <td align="center"><b>支付宝</b></td>
-      <td align="center"><b>微信</b></td>
+      <td align="center"><b>微信 · WeChat</b></td>
     </tr>
     <tr>
       <td><img src="支付宝收款码.jpg" width="200" alt="支付宝"></td>
