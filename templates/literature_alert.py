@@ -436,9 +436,9 @@ def _render_paper_card(p: dict, match_map: dict, lang: str = "zh", interactive: 
             label = t("abstract_en_label", lang) if lang == "en" else "英文摘要"
             ai_html += f'<div class="ai-row" style="margin-top:6px;padding-top:6px;border-top:1px dashed #ddd;"><b>📝 {label}：</b>{en_abs}</div>'
 
+    prefix = f"{date_tag}_{hid}" if date_tag else hid
     int_html = ""
     if interactive:
-        prefix = f"{date_tag}_{hid}" if date_tag else hid
         int_html = f"""
   <div class="int-row" data-pid="{prefix}">
     <button class="st-btn st-unread active" onclick="setStatus('{prefix}','unread')">{t("unread_btn", lang)}</button>
