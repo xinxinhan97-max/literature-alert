@@ -45,6 +45,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(SCRIPT_DIR, "config.json")
 STRATEGIES_PATH = os.path.join(SCRIPT_DIR, "strategies.json")
 CACHE_PATH = os.path.join(SCRIPT_DIR, "sent_cache.pkl")
+SEARCH_TASK_PATH = os.path.join(SCRIPT_DIR, "search_task.json")
 
 # ============================================================
 # 默认配置（config.json 不存在时自动生成）
@@ -248,9 +249,12 @@ def load_strategies() -> dict:
 # API 检索
 # ============================================================
 
-def search_arxiv(query: str, max_results: int = 10, lookback_days: int = 7, timeout: int = 60) -> list[dict]:
+def search_arxiv(query: str, max_results: int = 10, lookback_days: int = 7, timeout: int = 60,
+                 from_date: str | None = None, to_date: str | None = None) -> list[dict]:
     base_url = "https://export.arxiv.org/api/query"
-    params = {"search_query": query, "sortBy": "submittedDate", "sortOrder": "descending", "max_results": max_results}
+    # 日期范围模式下拉更多结果，本地过滤（arXiv API 不支持日期范围过滤）
+    fetch_n = max(max_results * 3, 50) if (from_date or to_date) else max_results
+    params = {"search_query": query, "sortBy": "submittedDate", "sortOrder": "descending", "max_results": fetch_n}
     url = base_url + "?" + urllib.parse.urlencode(params)
     for attempt in range(3):
         try:
@@ -271,12 +275,28 @@ def search_arxiv(query: str, max_results: int = 10, lookback_days: int = 7, time
         print(t("arxiv_parse_fail", "zh", error=str(e)))
         return []
     papers = []
-    cutoff_date = datetime.now(timezone.utc) - timedelta(days=lookback_days)
+    if from_date:
+        try:
+            cutoff_start = datetime.fromisoformat(from_date).replace(tzinfo=timezone.utc)
+        except (ValueError, TypeError):
+            cutoff_start = None
+    else:
+        cutoff_start = datetime.now(timezone.utc) - timedelta(days=lookback_days)
+    if to_date:
+        try:
+            cutoff_end = datetime.fromisoformat(to_date).replace(tzinfo=timezone.utc) + timedelta(days=1)
+        except (ValueError, TypeError):
+            cutoff_end = None
+    else:
+        cutoff_end = None
     for entry in root.findall("atom:entry", ns):
         published = entry.find("atom:published", ns)
         pub_date = published.text.strip()[:10] if published is not None else "?"
         try:
-            if datetime.fromisoformat(pub_date).replace(tzinfo=timezone.utc) < cutoff_date:
+            pub_dt = datetime.fromisoformat(pub_date).replace(tzinfo=timezone.utc)
+            if cutoff_start and pub_dt < cutoff_start:
+                continue
+            if cutoff_end and pub_dt >= cutoff_end:
                 continue
         except (ValueError, AttributeError):
             pass
@@ -295,13 +315,18 @@ def search_arxiv(query: str, max_results: int = 10, lookback_days: int = 7, time
             "title": title, "authors": ", ".join(authors[:6]) + (", ..." if len(authors) > 6 else ""),
             "abstract": abstract, "url": paper_url, "date": pub_date, "source": "arXiv",
         })
-    return papers
+    return papers[:max_results]
 
 
-def search_openalex(query: str, max_results: int = 15, lookback_days: int = 7) -> list[dict]:
-    from_date = (datetime.now() - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
+def search_openalex(query: str, max_results: int = 15, lookback_days: int = 7,
+                    from_date: str | None = None, to_date: str | None = None) -> list[dict]:
+    if from_date is None:
+        from_date = (datetime.now() - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
+    filter_str = f"from_publication_date:{from_date}"
+    if to_date:
+        filter_str += f",to_publication_date:{to_date}"
     params = {"search": query, "sort": "publication_date:desc", "per-page": max_results,
-              "filter": f"from_publication_date:{from_date}"}
+              "filter": filter_str}
     url = "https://api.openalex.org/works?" + urllib.parse.urlencode(params)
     for attempt in range(2):
         try:
@@ -605,7 +630,177 @@ def send_email(config: dict, html_body: str, topic: str, lang: str = "zh"):
 # 主流程
 # ============================================================
 
+def run_search_mode(task_file: str):
+    """一次性文献检索模式：读 search_task.json，检索 + AI 分析 + 生成 HTML"""
+    if not os.path.exists(task_file):
+        print(f"[ERROR] 检索任务文件不存在: {task_file}")
+        sys.exit(1)
+    with open(task_file, "r", encoding="utf-8") as f:
+        task = json.load(f)
+
+    config = load_config()
+    lang = config.get("output", {}).get("language", "zh")
+    if lang not in ("zh", "en", "bilingual"):
+        lang = "zh"
+    ui_lang = "zh" if lang == "bilingual" else lang
+
+    search_cfg = config.get("search", {})
+    max_results = task.get("max_results_per_query", search_cfg.get("max_results_per_query", 15))
+    date_range = task.get("date_range", {})
+    from_date = date_range.get("from", "")
+    to_date = date_range.get("to", "")
+    directions = task.get("directions", [])
+    topic = task.get("topic", "文献检索")
+    queries = task.get("queries", [])
+
+    if not queries:
+        print("[ERROR] search_task.json 中没有检索词 (queries)")
+        sys.exit(1)
+
+    print(f"[SEARCH] 模式: 一次性检索")
+    print(f"[SEARCH] 主题: {topic}")
+    if from_date:
+        print(f"[SEARCH] 日期范围: {from_date} ~ {to_date or '至今'}")
+
+    match_map = {d["id"]: d.get("name_short", d["name"]) for d in directions}
+
+    # 检索
+    papers_by_layer = []
+    for q in queries:
+        label = q.get("label", "检索")
+        oa_q = q.get("openalex", "")
+        arxiv_q = q.get("arxiv", "")
+        print(t("search_label", ui_lang, layer=label))
+
+        oa_papers = []
+        if oa_q:
+            oa_papers = search_openalex(oa_q, max_results=max_results,
+                from_date=from_date or None, to_date=to_date or None)
+        arxiv_papers = []
+        if arxiv_q:
+            arxiv_papers = search_arxiv(arxiv_q, max_results=max_results,
+                from_date=from_date or None, to_date=to_date or None,
+                timeout=search_cfg.get("arxiv_timeout", 60))
+
+        seen_urls = set()
+        merged = []
+        for p in oa_papers + arxiv_papers:
+            url = p.get("url", "")
+            if url and url not in seen_urls:
+                seen_urls.add(url)
+                merged.append(p)
+
+        print(t("papers_count", ui_lang, oa=str(len(oa_papers)), arxiv=str(len(arxiv_papers)),
+                new=str(len(merged))))
+        papers_by_layer.append((label, merged))
+
+    all_papers = []
+    for _, papers in papers_by_layer:
+        for p in papers:
+            p["_hash"] = hashlib.md5(p.get("url", "").encode()).hexdigest()
+        all_papers.extend(papers)
+
+    # IF 匹配 + 缺失摘要回退
+    for p in all_papers:
+        if not p.get("abstract"):
+            doi = p.get("doi", "")
+            if not doi:
+                m = re.search(r'doi\.org/(10\.[^/\s]+/[^/\s]+)', p.get("url", ""))
+                if m:
+                    doi = m.group(1)
+            if doi:
+                try:
+                    cr_url = f"https://api.crossref.org/works/{doi}"
+                    req = urllib.request.Request(cr_url, headers={"User-Agent": "LiteratureAlert/3.0"})
+                    with urllib.request.urlopen(req, timeout=10) as resp:
+                        cr_data = json.loads(resp.read().decode("utf-8"))
+                    cr_abs = cr_data.get("message", {}).get("abstract", "")
+                    if cr_abs:
+                        cr_abs = re.sub(r'<[^>]+>', '', cr_abs)
+                        cr_abs = re.sub(r'\s+', ' ', cr_abs).strip()
+                        if cr_abs:
+                            p["abstract"] = cr_abs
+                            print(t("crossref_found", ui_lang, title=p.get('title', '')[:50]))
+                except Exception:
+                    pass
+        jname = p.get("journal", "")
+        if jname:
+            info = match_journal_if(jname)
+            p["if_val"] = info.get("if", "?")
+            p["if_q"] = info.get("q", "")
+        else:
+            p["if_val"] = "?"
+            p["if_q"] = ""
+
+    # AI 分析
+    ai_cfg = config.get("ai", {})
+    ai_key = ai_cfg.get("api_key", "")
+    ai_base = ai_cfg.get("base_url", "https://api.deepseek.com/v1")
+    ai_model = ai_cfg.get("model", "deepseek-chat")
+
+    if all_papers and ai_key and "YOUR" not in ai_key:
+        print(f"\n{t('ai_preparing', ui_lang, count=str(len(all_papers)), model=ai_model)}")
+        for_input = []
+        for i, p in enumerate(all_papers):
+            for_input.append({
+                "idx": i, "title": p.get("title", ""),
+                "abstract": p.get("abstract", ""),
+                "journal": p.get("journal", ""),
+                "if_val": p.get("if_val", "?"), "q": p.get("if_q", ""),
+            })
+        analyses = analyze_papers(for_input, ai_key,
+                                   directions=directions,
+                                   base_url=ai_base, model=ai_model,
+                                   language=lang)
+        for a in analyses:
+            idx = a.get("idx", -1)
+            if 0 <= idx < len(all_papers):
+                all_papers[idx]["ai"] = a
+        print(t("ai_done", ui_lang, count=str(len(analyses))))
+        all_papers.sort(key=lambda p: (
+            p.get("ai", {}).get("score", 0) if isinstance(p.get("ai", {}).get("score", 0), (int, float)) else 0
+        ), reverse=True)
+
+    sorted_papers = [(t("sorted_by_score", ui_lang), all_papers)] if all_papers else papers_by_layer
+    strategy = {"topic": topic, "subtitle": task.get("subtitle", "")}
+    html = build_html(sorted_papers, strategy, match_map=match_map, interactive=True, lang=ui_lang)
+
+    # 输出
+    output_cfg = config.get("output", {})
+    out_dir = output_cfg.get("dir", "")
+    if out_dir and os.path.isabs(out_dir):
+        pass
+    elif out_dir:
+        out_dir = os.path.join(SCRIPT_DIR, out_dir)
+    else:
+        out_dir = SCRIPT_DIR
+    os.makedirs(out_dir, exist_ok=True)
+
+    today_tag = datetime.now().strftime("%m%d_%H%M")
+    html_path = os.path.join(out_dir, f"search_{today_tag}.html")
+    with open(html_path, "w", encoding="utf-8") as f:
+        f.write(html)
+
+    print(t("html_saved", ui_lang, path=html_path))
+    try:
+        webbrowser.open(f"file:///{html_path.replace(chr(92), '/')}")
+    except Exception:
+        pass
+
+
 def main():
+    # --search 模式：一次性文献检索
+    search_mode = False
+    search_file = None
+    for i, arg in enumerate(sys.argv):
+        if arg == "--search" and i + 1 < len(sys.argv):
+            search_mode = True
+            search_file = sys.argv[i + 1]
+            break
+    if search_mode:
+        run_search_mode(search_file)
+        return
+
     dry_run = "--dry-run" in sys.argv
     no_ai = "--no-ai" in sys.argv
 

@@ -1,8 +1,8 @@
 # Literature Alert · 文献快报
 
-一个每天自动搜论文、AI 读摘要、生成网页报告的小工具。
+一个搜论文的小工具。两种用法：定时推送 or 一次性检索。AI 读摘要、打分、翻译、生成网页报告。
 
-A small tool that searches new papers daily, uses AI to read abstracts, and generates an interactive HTML report.
+A paper search tool with two modes: scheduled daily alerts or one-time literature search. AI reads abstracts, scores relevance, translates, and generates an interactive HTML report.
 
 ---
 
@@ -29,6 +29,9 @@ cd literature-alert/templates
 # 想用 AI 分析的话，config.json 里填 api key · Fill in api key in config.json for AI analysis
 python literature_alert.py --dry-run   # 先试跑 · test run
 python literature_alert.py             # 正式跑 · run
+
+# 一次性检索 · One-time search
+python literature_alert.py --search search_task.json
 ```
 
 ---
@@ -53,6 +56,8 @@ python literature_alert.py             # 正式跑 · run
   Optional email digest
 - 可选定时任务或开机自启
   Optional scheduled daily run or auto-start on boot
+- 支持一次性检索，可指定日期范围（不限最近一周）
+  One-time search mode with custom date range (not limited to recent week)
 
 AI 模型用 DeepSeek 一个月大概两块钱。不用 AI 也行，纯检索。
 
